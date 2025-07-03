@@ -153,13 +153,27 @@
                  '@is-a-roos-class
                  (if (eq? (car arg) '@roos-classname@)
                      (@roos-classname at ...)
-                     (apply (@roos-caller at ...) arg))))))))
+                     (apply (@roos-caller at ...) arg))))))
+      ((_ (a . bb) (at ... . atb) self (supers ...) b ...)
+       (define (a . arg)
+         (roos1 (at ... . atb) self (supers ...) b ...)
+         (if (null? arg)
+             (a)
+             (if (eq? (car arg) '@roos-class?)
+                 '@is-a-roos-class
+                 (if (eq? (car arg) '@roos-classname@)
+                     (@roos-classname at ... . atb)
+                     (apply (@roos-caller at ... . atb) arg))))))
+      ))
            
 
   (define-syntax roos
     (syntax-rules ()
       ((_ (a ...) self (supers ...) b ...)
-       (@roos-top (a ...) (a ...) self (supers ...) b ...))))
+       (@roos-top (a ...) (a ...) self (supers ...) b ...))
+      ((_ (a ... . b) self (supers ...) c ...)
+       (@roos-top (a ... . b) (a ... . b) self (supers ...) c ...))
+      ))
                  
 
   (define (roos-class? cl)
