@@ -1,7 +1,7 @@
 #lang racket/base
 
   (require racket/syntax)
-  (provide roos -> roos-object? roos-class roos-class?)
+  (provide roos -> roos-object? roos-class roos-class? roos-classname)
 
   (define (roos-object? obj)
     (with-handlers ([exn:fail? (lambda (exn) #f)])
