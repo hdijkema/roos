@@ -1,7 +1,15 @@
-.DS_Store
-compiled/
-/doc/
-*~
+# -*- conf -*-
+
+
 *.bak
-\#*
-.\#*
+*.dep
+*.exe
+*.tar*
+*.zip*
+*.zo
+*~
+
+/public/
+bin/
+compiled/
+doc/

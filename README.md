@@ -1,2 +1,7 @@
 # roos
-An OO framework for Racket
+
+An OO implementation for racket. 
+
+## License
+
+Apache 2.0
