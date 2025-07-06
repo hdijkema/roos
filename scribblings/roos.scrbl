@@ -79,7 +79,7 @@ Returns the defined roos class of an instantiated roos class if @code{roos-objec
           (: (-> bb y)        "(-> bb y) Will return the value of y in class b1, i.e. 7")
           (: (-> bb v)        "(-> bb v) Will return the value of y in class a, i.e. 42")
 
-          (define cc (c))
+          (define cc (roos-new c))
           (: (-> cc zy)       "(-> cc zy) Will return the value of y in super class b1")
           (: (-> cc y! 88)    "(-> cc y! 88) Will set the value of y in class c")
           (: (-> cc zy)       "(-> cc zy) Will return the value of y in super class b1")
