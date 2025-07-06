@@ -5,6 +5,7 @@
 
 (provide def-roos
          -*
+         roos-new
          ->
          ->>
          roos-object?
