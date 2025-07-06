@@ -18,7 +18,7 @@ It has a simple form of inheritance. All methods and attributes are "virtual", i
 if called from a base class, and re-declared in a derived roos "class", the derived attribute or
 method will be used.
 
-@defform[(roos (class-name ...) this supers
+@defform[(def-roos (class-name ...) this supers
                (attribute-i value-i)
                ...
                ((method-j ...) expr ...)
@@ -42,11 +42,11 @@ Returns the defined roos class of an instantiated roos class if @code{roos-objec
 
 
 @examples[(require roos)
-          (roos (a x) this (supers)
+          (def-roos (a x) this (supers)
                 (y ( + x 4))
                 ((g a) (* a (-> this y))))
           
-          (roos (b1) this (supers (a 6))
+          (def-roos (b1) this (supers (a 6))
                 ((v . a) (if (null? a)
                              (-> supers y)
                              (begin
@@ -54,11 +54,11 @@ Returns the defined roos class of an instantiated roos class if @code{roos-objec
                                (-> supers y))))
                 (y 55))
           
-          (roos (b2) this (supers (a 5))
+          (def-roos (b2) this (supers (a 5))
                 ((v2) (-> supers y))
                 ((v2*) (-> this y)))
           
-          (roos (c) this (supers (b1) (b2))
+          (def-roos (c) this (supers (b1) (b2))
                 ((zy) (-> supers y))
                 ((z1) (-> supers v))
                 ((z2) (-> supers v2))
@@ -69,7 +69,7 @@ Returns the defined roos class of an instantiated roos class if @code{roos-objec
               ((_ c d ...)
                c)))
           
-          (define bb (b1))
+          (define bb (-* b1))
           
           (: (-> bb g 2)      "(-> bb g 2) Will return the value of (* 2 y of class b1)")
           (: (-> bb y! 7)     "(-> bb y! 7) Will set y in class b1 to 7")
