@@ -25,14 +25,14 @@
 ;; Persistance helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define @storage@ (make-hash))
+(define @storage@ (make-hasheq))
 
 (define (cache-get id symbol)
   (let ((h (hash-ref @storage@ id)))
     (hash-ref h symbol)))
 
 (define (cache-set! id symbol val)
-  (let ((h (hash-ref @storage@ id (make-hash))))
+  (let ((h (hash-ref @storage@ id (make-hasheq))))
     (hash-set! h symbol val)
     (hash-set! @storage@ id h)))
 
@@ -118,7 +118,7 @@
   ;     (if (roos-class? cl)
   ;         ((cdr cl) a ...)
   ;         (error "This is not a roos class")))))
-           
+
 
   (define-syntax ->
     (syntax-rules ()
@@ -234,12 +234,24 @@
          (hash-set! @roos@ '@roos-id@ (new-id))
          (hash-set! @roos@ '@set-roos-id@ (lambda (id)
                                             (hash-set! @roos@ '@roos-id@ id)))
+         (define last-call #f)
+         (define last-func #f)
+         (define @supers-hash@ (make-hasheq))
          (define self (cons 'roos-object
                             (lambda (f-name . args)
-                              (roos-call @roos@ (hash-ref @roos@ '@supers@) f-name args))))
+                              (if (eq? last-call f-name)
+                                  (apply last-func args)
+                                  (let ((f (hash-ref @roos@ f-name #f)))
+                                    (if f
+                                        (begin
+                                          (set! last-call f-name)
+                                          (set! last-func f)
+                                          (apply f args))
+                                        (roos-call @roos@ (hash-ref @roos@ '@supers@) f-name args)))))
+         ))
          (define supers (cons 'roos-object
                             (lambda (f-name . args)
-                              (roos-call (make-hash) (hash-ref @roos@ '@supers@) f-name args))))
+                              (roos-call @supers-hash@ (hash-ref @roos@ '@supers@) f-name args))))
          (hash-set! @roos@ '@roos@ (lambda () @roos@))
          ;(hash-set! @roos@ '@supers@ '())
          (hash-set! @roos@ '@set-supers@ (lambda (s) (hash-set! @roos@ '@supers@ s)))
@@ -259,7 +271,7 @@
     (syntax-rules (s)
       ((_ class classname self (supers) b ...)
        (begin
-         (define @roos@ (make-hash))
+         (define @roos@ (make-hasheq))
          (hash-set! @roos@ '@supers@ '())
          (init-roos-body @roos@ class classname self supers)
          (@@roos-def @roos@ b)
@@ -270,7 +282,7 @@
        (let* ((s (list super-invokes ...))
              (obj 
               (begin
-                (let ((@roos@ (make-hash)))
+                (let ((@roos@ (make-hasheq)))
                   (hash-set! @roos@ '@supers@ s)
                   (init-roos-body @roos@ class classname self supers)
                   (@@roos-def @roos@ b)
