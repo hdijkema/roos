@@ -46,7 +46,7 @@ Returns the defined roos class of an instantiated roos class if @code{roos-objec
                 (y ( + x 4))
                 ((g a) (* a (-> this y))))
           
-          (def-roos (b1) this (supers (a 6))
+          (def-roos (b1) this (supers (-* a 6))
                 ((v . a) (if (null? a)
                              (-> supers y)
                              (begin
@@ -54,11 +54,11 @@ Returns the defined roos class of an instantiated roos class if @code{roos-objec
                                (-> supers y))))
                 (y 55))
           
-          (def-roos (b2) this (supers (a 5))
+          (def-roos (b2) this (supers (-* a 5))
                 ((v2) (-> supers y))
                 ((v2*) (-> this y)))
           
-          (def-roos (c) this (supers (b1) (b2))
+          (def-roos (c) this (supers (-* b1) (-* b2))
                 ((zy) (-> supers y))
                 ((z1) (-> supers v))
                 ((z2) (-> supers v2))
