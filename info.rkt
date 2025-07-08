@@ -1,7 +1,7 @@
 #lang info
 
 (define pkg-authors '(hnmdijkema))
-(define version "0.55")
+(define version "0.6")
 (define license 'Apache-2.0)
 (define collection "roos")
 (define pkg-desc "An OO Framework for Racket")
