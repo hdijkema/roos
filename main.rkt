@@ -103,13 +103,19 @@
 
 (define-syntax @@mk-name
   (syntax-rules ()
+    ((_ (f . args))
+     'f)
     ((_ f . args)
-     'f)))
+     'f)
+    ))
 
 (define-syntax @@mk-proc
   (syntax-rules ()
+    ((_ (f . args))
+     f)
     ((_ f . args)
-     f)))
+     f)
+    ))
 
 (define-syntax @@mk-super-infos
   (syntax-rules ()
@@ -426,53 +432,88 @@
         #'#t))
     ))
 
-(define-syntax def-roos
+
+(define-syntax def-roos-body
   (syntax-rules ()
-    ((_ (cl ...) this (supers ...)
+    ((_ cl-decl this (supers ...)
         body
         ...)
      (begin
-       (define (cl ...)
-         (@@check-keywords this supers ...)
-         (define this (make-hasheq))
+       (@@check-keywords this supers ...)
+       (define this (make-hasheq))
          
-         (@@mk-body this (supers ...) (roos-id (@@new-id)))
+       (@@mk-body this (supers ...) (roos-id (@@new-id)))
 
-         (@@mk-supers supers ...)
-         (@@mk-bodies this (supers ...) (body ...))
+       (@@mk-supers supers ...)
+       (@@mk-bodies this (supers ...) (body ...))
 
-         (define (@set-caller@ c)
-           (set-roos-object*-caller! this c)
-           (for-each (lambda (s)
-                       ((roos-object*-set-caller s) c))
-                     (roos-object*-supers this)))
+       (define (@set-caller@ c)
+         (set-roos-object*-caller! this c)
+         (for-each (lambda (s)
+                     ((roos-object*-set-caller s) c))
+                   (roos-object*-supers this)))
 
-         (define (@caller@ f . args)
-           (let ((ff (@@find-func f (list this))))
-             (if ff
-                 (apply ff args)
-                 (error "No such member"))))
+       (define (@caller@ f . args)
+         (let ((ff (@@find-func f (list this))))
+           (if ff
+               (apply ff args)
+               (error "No such member"))))
 
-         (set! this (roos-object*
-                     this
-                     (@@mk-proc supers ...)
-                     (@@mk-name cl ...)
-                     (@@mk-proc cl ...)
-                     @set-caller@
-                     @caller@))
-         (@set-caller@ @caller@)
+       (set! this (roos-object*
+                   this
+                   (@@mk-proc supers ...)
+                   (@@mk-name cl-decl)
+                   (@@mk-proc cl-decl)
+                   @set-caller@
+                   @caller@))
+       (@set-caller@ @caller@)
 
-         (@@finalize this body ...)
+       (@@finalize this body ...)
 
-         this
-         )
-       (@@mk-result (cl ...)
-                    (roos-class* (@@mk-proc cl ...)
-                                 (@@mk-name cl ...)
+       this
+       )
+     )
+    ))
+
+(define-syntax def-roos
+  (syntax-rules ()
+    ((_ (cl) this (supers ...) body ...)
+     (begin
+       (define (cl)
+         (def-roos-body cl this (supers ...) body ...))
+       (@@mk-result (cl)
+                    (roos-class* (@@mk-proc cl)
+                                 (@@mk-name cl)
                                  (@@mk-member-infos body ...)
-                                 (@@mk-super-infos supers ...)
-                                 ))
-       ))
+                                 (@@mk-super-infos supers ...)))))
+    ((_ (cl . a) this (supers ...) body ...)
+     (begin
+       (define (cl . a)
+         (def-roos-body (cl . a) this (supers ...) body ...))
+       (@@mk-result (cl . a)
+                    (roos-class* (@@mk-proc cl)
+                                 (@@mk-name cl)
+                                 (@@mk-member-infos body ...)
+                                 (@@mk-super-infos supers ...)))))
+    ((_ (cl a ...) this (supers ...) body ...)
+     (begin
+       (define (cl a ...)
+         (def-roos-body (cl a ...) this (supers ...) body ...))
+       (@@mk-result (cl a ...)
+                    (roos-class* (@@mk-proc cl)
+                                 (@@mk-name cl)
+                                 (@@mk-member-infos body ...)
+                                 (@@mk-super-infos supers ...)))))
+    ((_ (cl a ... . b) this (supers ...) body ...)
+     (begin
+       (define (cl a ... . b)
+         (def-roos-body (cl a ... . b) this (supers ...) body ...))
+       (@@mk-result (cl a ... . b)
+                    (roos-class* (@@mk-proc cl)
+                                 (@@mk-name cl)
+                                 (@@mk-member-infos body ...)
+                                 (@@mk-super-infos supers ...)))))
+     
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -774,44 +815,6 @@
 ;; Testing
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-;(def-roos (test x) this (supers)
-;  ("y contains initially the value x" (y x))
-;  ("f calculates a times y" ((f a) (* a (-> this y)))))
-
-;(def-roos (test1 x) this (supers (-! test x))
-;  ((g a) (* a a)))
-
-;(def-roos (a) this (supers)
-;  ((gg b) (+ b b b)))
-
-;(def-roos (test2 x) this (supers (-! test x) (-! a))
-;  ("y redefines y of class test" (y x))
-;  ("Calculates some calculation" ((ff a) (+ a (-> this y) (-> this gg (-> this y))))))
-
-;(define o (-* test 5))
-;(define o1 (-* test1 6))
-;(define o2 (-* test2 3))
-
-;(def-roos (tst) this (supers)
-;  (count 0)
-;  ((g1 n)
-;   (-> this g n))
-;  ((g n)
-;   (set! count (+ count 1))
-;   (if (> n 0)
-;       (+ n (-> this g1 (- n 1)) (-> this g1 (- n 2)))
-;       n))
-;  ((t n)
-;   (set! count 0)
-;   (let ((v (-> this g n)))
-;     (values v count)))
-;  )
-
-;(define ot (-* tst))
-
-
-
 (module+ test
   (require rackunit)
 
@@ -913,4 +916,3 @@
      )
    )
   )
-
