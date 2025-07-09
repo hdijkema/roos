@@ -145,7 +145,7 @@ See the full SQLite example in the next section.
 Below is an example SQLite backend implementation that stores fields in a table:
 
 @#reader scribble/comment-reader 
-@racketblock[
+[racketblock 
 (require db)
 (require racket/vector)
 
