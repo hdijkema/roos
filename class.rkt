@@ -4,7 +4,10 @@
 (require (for-syntax (rename-in roos [-> old->])))
 (require (rename-in roos [-> old->]))
 
-(provide -> send new)
+(provide (all-from-out roos)
+         (all-from-out racket/class)
+         -> send new
+         )
 
 (define-syntax send
   (syntax-rules ()
