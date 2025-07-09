@@ -144,13 +144,14 @@ See the full SQLite example in the next section.
 
 Below is an example SQLite backend implementation that stores fields in a table:
 
+@#reader scribble/comment-reader 
 @racketblock[
 (require db)
 (require racket/vector)
 
-@; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-@; ;; Conversion of field values
-@; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Conversion of field values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (value->string s-expr)
   (let ((o (open-output-string)))
@@ -161,9 +162,9 @@ Below is an example SQLite backend implementation that stores fields in a table:
   (let ((o (open-input-string str)))
     (read o)))
 
-@; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-@; ;; Database storage backend
-@; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Database storage backend
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define conn (sqlite3-connect #:database "roos.db" #:mode 'create))
 (query-exec conn "CREATE TABLE IF NOT EXISTS store (class TEXT, id TEXT, field TEXT, val TEXT)")
@@ -214,14 +215,16 @@ Below is an example SQLite backend implementation that stores fields in a table:
 
 This example builds an address book with persistent reference to persons, using ROOS' object ID mechanism.
 
+@#reader scribble/comment-reader 
 @racketblock[
 (require racket/vector)
 
+;; person class
 (def-roos (person) this (supers)
   (persist (name ""))
   (persist (tel "")))
 
-
+;; book class
 (def-roos (book) this (supers)
   (persist (ids (list)))
   (persist (name ""))
@@ -254,7 +257,7 @@ This example builds an address book with persistent reference to persons, using 
   )
    
    
-@; ;; Create sample data
+;; Create sample data
 (define b (-! book))
 
 (define (adder n t)
@@ -270,7 +273,7 @@ This example builds an address book with persistent reference to persons, using 
 
 (-> b (for-each (lambda (p) (displayln (-> p name)))))
 
-@; ;; Reopen addressbook later from persistent storage
+;; Reopen addressbook later from persistent storage
 (define a (-! book))
 (-> b (for-each (lambda (p) (displayln (-> p name)))))
   
