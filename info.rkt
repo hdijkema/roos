@@ -9,7 +9,7 @@
 (define scribblings
   '(
     ("scribblings/roos.scrbl" () (library) "roos")
-    ("scribblings/class.scrbl" () (library interop) "roos-class")
+    ("scribblings/class.scrbl" () (interop) "roos-class")
     )
   )
 
