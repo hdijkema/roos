@@ -41,7 +41,7 @@ Methods and fields are always virtual. Superclass definitions are resolved based
 @racket[def-roos] supports default values, optional documentation, and user-defined persistence.
 }
 
-@subsection{Object and Method Use}
+@section{Object and Method Use}
 
 @itemlist[
  @item{@racket[(-> obj field)] — call getter for field.}
@@ -56,7 +56,7 @@ Methods and fields are always virtual. Superclass definitions are resolved based
  @item{@racket[(roos-id! obj id)] — set object's ID (used in persistence).}
 ]
 
-@subsection{Persistence and Storage Backend}
+@section{Persistence and Storage Backend}
 
 ROOS lets you persist selected attributes by tagging them with @racket[persist]. Persistence is handled by user-provided backends through:
 
@@ -143,7 +143,7 @@ This example builds an address book with persistent reference to persons, using 
 
 @bold{Note:} call @racket[(roos-storage-stop-deleting! #t)] before shutdown to prevent finalizers from purging storage content.
 
-@subsection{Cyclic References and Garbage Collection}
+@section{Cyclic References and Garbage Collection}
 
 ROOS objects can reference each other freely, including circular (cyclic) references.
 For example, a doubly-linked list:
