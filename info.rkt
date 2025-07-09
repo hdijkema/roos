@@ -8,8 +8,8 @@
 
 (define scribblings
   '(
-    ("scribblings/roos.scrbl" (one-page) (library) "roos")
-    ("scribblings/class.scrbl" (one-page) (library) "roos-class")
+    ("scribblings/roos.scrbl" () (library) "roos")
+    ("scribblings/class.scrbl" () (library interop) "roos-class")
     )
   )
 
