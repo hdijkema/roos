@@ -19,4 +19,6 @@
 (define build-deps
   '("racket-doc"
     "rackunit-lib"
-    "scribble-lib"))
+    "scribble-lib"
+    "uuid"
+    "finalizer"))
