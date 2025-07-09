@@ -14,7 +14,7 @@
 
 @defmodule[roos/class]
 
-This module provides a compatibility layer between the @racket[roos] object system and the standard @racketmodname[racket/class] system. It exports the macros @racket[send], @racket[->], and @racket[new], which automatically dispatch to the appropriate implementation based on the type of the given object or class.
+This module provides a compatibility layer between the @seclink["roos"  #:doc '(lib "roos/scribblings/roos.scrbl") ]{@racketmodname[roos]} object system and the standard @racketmodname[racket/class] system. It exports the macros @racket[send], @racket[->], and @racket[new], which automatically dispatch to the appropriate implementation based on the type of the given object or class.
 
 @section{Macros}
 
