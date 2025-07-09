@@ -77,7 +77,7 @@
 ;; Class definition syntax
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(struct roos-class* (closure name members super-inits))
+(struct roos-class* (closure name members super-inits decl))
 (struct roos-object* (this supers classname the-class
                            set-caller (caller #:mutable)))
 
@@ -485,7 +485,8 @@
                     (roos-class* (@@mk-proc cl)
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
-                                 (@@mk-super-infos supers ...)))))
+                                 (@@mk-super-infos supers ...)
+                                 'cl))))
     ((_ (cl . a) this (supers ...) body ...)
      (begin
        (define (cl . a)
@@ -494,7 +495,8 @@
                     (roos-class* (@@mk-proc cl)
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
-                                 (@@mk-super-infos supers ...)))))
+                                 (@@mk-super-infos supers ...)
+                                 '(cl . a)))))
     ((_ (cl a ...) this (supers ...) body ...)
      (begin
        (define (cl a ...)
@@ -503,7 +505,8 @@
                     (roos-class* (@@mk-proc cl)
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
-                                 (@@mk-super-infos supers ...)))))
+                                 (@@mk-super-infos supers ...)
+                                 (cl a ...)))))
     ((_ (cl a ... . b) this (supers ...) body ...)
      (begin
        (define (cl a ... . b)
@@ -512,7 +515,8 @@
                     (roos-class* (@@mk-proc cl)
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
-                                 (@@mk-super-infos supers ...)))))
+                                 (@@mk-super-infos supers ...)
+                                 (cl a ... . b)))))
      
     ))
 
@@ -700,116 +704,127 @@
      '())
     ((_ cl-obj f ...)
      (list 'f ...))))
-  
+
+(define (roos-help* cl-obj . symbols)
+  (let* ((is-class (roos-class*? cl-obj))
+         (is-obj (roos-object*? cl-obj))
+         (funcs symbols)
+         (no-funcs (null? funcs)))
+    (let ((cln (if is-class
+                   (roos-class*-name cl-obj)
+                   (roos-object*-classname cl-obj)))
+          (cl (if is-class
+                  cl-obj
+                  (roos-object*-the-class cl-obj)))
+          )
+      (when no-funcs
+        (begin
+          (printf "Roos class: ~a\n" cln)
+          
+          (let ((re #px"^[(](.*)[)]$"))
+            (printf "  Instantiation: (-! ~a)\n"
+                    (cadr (regexp-match re
+                                        (format "~a" (roos-class*-decl cl))))))
+                                    
+          (let ((inits (roos-class*-super-inits cl)))
+            (unless (null? inits)
+              (printf "  Supers initializators:~a\n" (apply string-append
+                                                            (map (lambda (x) (format " ~a" x))
+                                                                 inits)))))
+          (when is-obj
+            (begin
+              (printf "  Object class hierarchy:\n")
+              (@@travel-obj-hierarchy
+               (lambda (depth obj)
+                 (printf "    ~a~a~a~a\n"
+                         (make-string depth #\space)
+                         (if (= depth 0) "" #\|)
+                         (make-string (* depth 3) #\-)
+                         (roos-object*-classname obj)))
+               cl-obj)))
+         
+          (printf "  ~a members:\n" (if is-class "Class" "Object"))))
+         
+      (if is-class
+          (let ((ind (if no-funcs "    " "")))
+            (for-each (lambda (m)
+                        (printf "~a~a~a\n"
+                                ind
+                                (cadr m)
+                                (if (string=? (caddr m) "")
+                                    ""
+                                    (format ": ~a" (caddr m)))))
+                      (@@get-members-cl cl-obj funcs)))
+          (let ((s (mutable-seteq)))
+            (@@travel-obj-hierarchy
+             (lambda (_depth obj)
+               (let ((cl (roos-object*-the-class obj))
+                     (cln (roos-object*-classname obj))
+                     (ind (if no-funcs "    " ""))
+                     (depth (if no-funcs _depth 0)))
+                 (let ((members
+                        (filter (lambda (m)
+                                  (not (set-member? s (car m))))
+                                (@@get-members-cl cl funcs))))
+                   (for-each (lambda (m)
+                               (set-add! s (car m))) members)
+                   (unless (null? members)
+                     (let ((starter (format "~a~a~a~a"
+                                            (make-string depth #\space)
+                                            (if (= depth 0) "" "|")
+                                            (make-string (* depth 3) #\-)
+                                            cln)))
+                       (printf "~a~a - ~a~a\n"
+                               ind
+                               starter
+                               (cadr (car members))
+                               (if (string=? (caddr (car members)) "")
+                                   ""
+                                   (format ": ~a" (caddr (car members)))))
+                       (let ((indent (make-string ( * depth 3) #\space))
+                             (line (make-string
+                                    (string-length (symbol->string cln))
+                                    #\-)))
+                         (for-each (lambda (m)
+                                     (if no-funcs
+                                         (printf "~a~a |~a ~a~a\n"
+                                                 ind
+                                                 indent
+                                                 line
+                                                 (cadr m)
+                                                 (if (string=? (caddr m) "")
+                                                     ""
+                                                     (format ": ~a" (caddr m))))
+                                         (printf "~a~a - ~a~a\n"
+                                                 ind
+                                                 starter
+                                                 (cadr m)
+                                                 (if (string=? (caddr m) "")
+                                                     ""
+                                                     (format ": ~a" (caddr m))))
+                                         ))
+                                   (cdr members))))))))
+             cl-obj)
+
+            (let ((cr ""))
+              (for-each (lambda (func)
+                          (unless (set-member? s func)
+                            (begin
+                              (printf "~a~a is not a member\n" cr func)
+                              (set! cr ""))))
+                        funcs)
+              )
+            )) ; let s
+      )))
+
 
 (define-syntax roos-help
   (syntax-rules ()
-    ((_ cl-obj ...)
-     (let* ((is-class (roos-class*? (@@mk-proc cl-obj ...)))
-            (is-obj (roos-object*? (@@mk-proc cl-obj ...)))
-            (funcs (@@mk-hlp-mems cl-obj ...))
-            (no-funcs (null? funcs)))
-       (let ((cln (if is-class
-                      (@@mk-name cl-obj ...)
-                      (roos-object*-classname (@@mk-proc cl-obj ...))))
-             (cl (if is-class
-                     (@@mk-proc cl-obj ...)
-                     (roos-object*-the-class (@@mk-proc cl-obj ...))))
-             )
-         (when no-funcs
-           (begin
-             (printf "Roos class: ~a\n" cln)
-             (let ((inits (roos-class*-super-inits cl)))
-               (unless (null? inits)
-                 (printf "  Supers initializators:~a\n" (apply string-append
-                                                               (map (lambda (x) (format " ~a" x))
-                                                                    inits)))))
-             (when is-obj
-               (begin
-                 (printf "  Object class hierarchy:\n")
-                 (@@travel-obj-hierarchy
-                  (lambda (depth obj)
-                    (printf "    ~a~a~a~a\n"
-                            (make-string depth #\space)
-                            (if (= depth 0) "" #\|)
-                            (make-string (* depth 3) #\-)
-                            (roos-object*-classname obj)))
-                  (@@mk-proc cl-obj ...))))
-         
-             (printf "  ~a members:\n" (if is-class "Class" "Object"))))
-         
-         (if is-class
-             (let ((ind (if no-funcs "    " "")))
-               (for-each (lambda (m)
-                           (printf "~a~a~a\n"
-                                   ind
-                                   (cadr m)
-                                   (if (string=? (caddr m) "")
-                                       ""
-                                       (format ": ~a" (caddr m)))))
-                         (@@get-members-cl (@@mk-proc cl-obj ...) funcs)))
-             (let ((s (mutable-seteq)))
-               (@@travel-obj-hierarchy
-                (lambda (_depth obj)
-                  (let ((cl (roos-object*-the-class obj))
-                        (cln (roos-object*-classname obj))
-                        (ind (if no-funcs "    " ""))
-                        (depth (if no-funcs _depth 0)))
-                    (let ((members
-                           (filter (lambda (m)
-                                       (not (set-member? s (car m))))
-                                     (@@get-members-cl cl funcs))))
-                        (for-each (lambda (m)
-                                    (set-add! s (car m))) members)
-                        (unless (null? members)
-                          (let ((starter (format "~a~a~a~a"
-                                                 (make-string depth #\space)
-                                                 (if (= depth 0) "" "|")
-                                                 (make-string (* depth 3) #\-)
-                                                 cln)))
-                            (printf "~a~a - ~a~a\n"
-                                    ind
-                                    starter
-                                    (cadr (car members))
-                                    (if (string=? (caddr (car members)) "")
-                                        ""
-                                        (format ": ~a" (caddr (car members)))))
-                            (let ((indent (make-string ( * depth 3) #\space))
-                                  (line (make-string
-                                         (string-length (symbol->string cln))
-                                         #\-)))
-                                (for-each (lambda (m)
-                                            (if no-funcs
-                                                (printf "~a~a |~a ~a~a\n"
-                                                        ind
-                                                        indent
-                                                        line
-                                                        (cadr m)
-                                                        (if (string=? (caddr m) "")
-                                                            ""
-                                                            (format ": ~a" (caddr m))))
-                                                (printf "~a~a - ~a~a\n"
-                                                        ind
-                                                        starter
-                                                        (cadr m)
-                                                        (if (string=? (caddr m) "")
-                                                            ""
-                                                            (format ": ~a" (caddr m))))
-                                                ))
-                                        (cdr members))))))))
-                (@@mk-proc cl-obj ...))
-
-               (let ((cr ""))
-                 (for-each (lambda (func)
-                             (unless (set-member? s func)
-                               (begin
-                                 (printf "~a~a is not a member\n" cr func)
-                                 (set! cr ""))))
-                         funcs)
-                 )
-               )) ; let s
-           )))))
-               
+    ((_ cl-obj)
+     (roos-help* cl-obj))
+    ((_ cl-obj a ...)
+     (roos-help* cl-obj 'a ...))
+    ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Testing
@@ -914,5 +929,21 @@
      (collect-garbage)
      (tst (= (-> o a2) 2) "After collection of o1, o will be deleted from storage")
      )
+   (def-roos (t1) this (supers)
+     (x 8))
+   (def-roos (t2 a) this (supers)
+     (x a))
+   (tst (= (-> (-! t2 5) x) 5))
+   (def-roos (t3 . a) this (supers)
+     ((f y) (map (lambda (x) (* x y)) a)))
+   (tst (equal? (-> (-! t3 4 5 6) f 2) '(8 10 12)))
+   (def-roos (t4 a b c . d) this (supers (-! t3 a b c))
+     ((g y) (cons (map (lambda (x) (+ x y))
+                       (-> supers f y)) (map (lambda (x) (* x y)) d)))
+     )
+   (tst (let ((r (-> (-! t4 2 3 4 12 13) g 2))
+               (R '((6 8 10) 24 26)))
+           (equal? r R)))
+                       
    )
   )

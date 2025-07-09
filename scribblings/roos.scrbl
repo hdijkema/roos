@@ -11,81 +11,167 @@
 
 @author[@author+email["Hans Dijkema" "hans@dijkewijk.nl"]]
 
-
 @defmodule[roos]
-ROOS as a simple OO framework that can be used to create objects have methods and attributes.
-It has a simple form of inheritance. All methods and attributes are "virtual", i.e.
-if called from a base class, and re-declared in a derived roos "class", the derived attribute or
-method will be used.
+ROOS is a lightweight object-oriented framework for Racket.
+It supports class definitions with attributes and methods, multiple inheritance, introspection,
+and persistent fields through a user-extensible storage mechanism. All methods and attributes
+are virtual, and may be overridden in subclasses.
 
-@defform[(def-roos (class-name ...) this supers
-               (attribute-i value-i)
-               ...
-               ((method-j ...) expr ...)
-               )]
-Defines a class with name @code{class-name}. @code{this} refers to the instantiated object of class @code{class-name}, @code{supers} refers to the possible instantiated super classes of @code{class-name}. @code{attribute-i} defines an attribute. It  will create a getter, named @code{attribute-i}, and a setter, named @code{attribute-i!}. @code{method-j} defines a method.
+@subsection{Class Definition Syntax}
 
-@defform[(-> obj name ...)]
-Calls a method or getter/setter of obj.
+@defform[(def-roos (class-name ...) this (supers ...) body ...)]{
+Defines a ROOS class.
 
-@defform[(roos-class? var)]
-Returns @code{#t}, if var is a defined roos class; @code{#f}, otherwise.
+@racket[this] is bound to the object under construction.
+@racket[supers] refers to instantiated superclass objects.
 
-@defform[(roos-object? var)]
-Returns @code{#t}, if var is a variable instantiated by a roos class; @code{#f}, otherwise.
+Each body entry may be:
 
-@defform[(roos-classname var)]
-Returns the name (as symbol) of the defined roos class, or of the class of a roos object, if var is an instantiated class; @code{#f}, otherwise.
+@itemlist[
+ @item{Standard attribute: @racket[(attr val)] — creates getter @racket[attr] and setter @racket[attr!].}
+ @item{Persistent attribute: @racket[(persist "Doc" (attr val))] — also stored/restored via storage backend.}
+ @item{Documented attribute: @racket[("Doc" (attr val))] — adds inline documentation to attribute.}
+ @item{Method: @racket[((method args ...) expr ...)] — defines a public method.}
+ @item{Documented method: @racket[("Doc" ((method args ...) expr ...))] — with documentation.}
+ @item{Reserved method: @racket[init] and @racket[finalize] are automatically called at creation and finalization.}
+]
 
-@defform[(roos-class var)]
-Returns the defined roos class of an instantiated roos class if @code{roos-object?} returns @code{#t}; @code{#f}, otherwise
+Methods and fields are always virtual. Superclass definitions are resolved based on declared order. Multiple inheritance is supported and left-to-right linearized.
 
+@racket[def-roos] supports default values, optional documentation, and user-defined persistence.
+}
 
-@examples[(require roos)
-          (def-roos (a x) this (supers)
-                (y ( + x 4))
-                ((g a) (* a (-> this y))))
-          
-          (def-roos (b1) this (supers (-! a 6))
-                ((v . a) (if (null? a)
-                             (-> supers y)
-                             (begin
-                               (-> supers y! (car a))
-                               (-> supers y))))
-                (y 55))
-          
-          (def-roos (b2) this (supers (-! a 5))
-                ((v2) (-> supers y))
-                ((v2*) (-> this y)))
-          
-          (def-roos (c) this (supers (-! b1) (-! b2))
-                ((zy) (-> supers y))
-                ((z1) (-> supers v))
-                ((z2) (-> supers v2))
-                (y -1))
-          
-          (define-syntax :
-            (syntax-rules ()
-              ((_ c d ...)
-               c)))
-          
-          (define bb (-! b1))
-          
-          (: (-> bb g 2)      "(-> bb g 2) Will return the value of (* 2 y of class b1)")
-          (: (-> bb y! 7)     "(-> bb y! 7) Will set y in class b1 to 7")
-          (: (-> bb g 6)      "(-> bb g 6) Will return 42")
-          (: (-> bb v)        "(-> bb v) Will return the value of y in class a")
-          (: (-> bb v 42)     "(-> bb v 42) Will set the value of y in class a to 42")
-          (: (-> bb y)        "(-> bb y) Will return the value of y in class b1, i.e. 7")
-          (: (-> bb v)        "(-> bb v) Will return the value of y in class a, i.e. 42")
+@subsection{Object and Method Use}
 
-          (define cc (roos-new c))
-          (: (-> cc zy)       "(-> cc zy) Will return the value of y in super class b1")
-          (: (-> cc y! 88)    "(-> cc y! 88) Will set the value of y in class c")
-          (: (-> cc zy)       "(-> cc zy) Will return the value of y in super class b1")
-          (: (-> cc z1)       "(-> cc z1) Will return the value of y in the super class of b1, which will be (+ 4 6) = 10")
-          (: (-> cc z2)       "(-> cc z2) Will return this value of y in the super class of b2, which will be (+ 4 5) = 9")
-          (: (-> cc v2*)      "(-> cc v2*) Will return the value of y in class c")
-          
-          ]
-                            
+@itemlist[
+ @item{@racket[(-> obj field)] — call getter for field.}
+ @item{@racket[(-> obj field! val)] — set field.}
+ @item{@racket[(-> obj method args ...)] — invoke method.}
+ @item{@racket[(->> obj name)] — retrieve method/field procedure.}
+ @item{@racket[(roos-object? x)] — is it a ROOS object?}
+ @item{@racket[(roos-class? x)] — is it a ROOS class definition?}
+ @item{@racket[(roos-classname obj)] — symbolic class name.}
+ @item{@racket[(roos-class obj)] — class definition.}
+ @item{@racket[(roos-id obj)] — unique object ID.}
+ @item{@racket[(roos-id! obj id)] — set object's ID (used in persistence).}
+]
+
+@subsection{Persistence and Storage Backend}
+
+ROOS lets you persist selected attributes by tagging them with @racket[persist]. Persistence is handled by user-provided backends through:
+
+@racketblock[
+(roos-storage! getter setter deleter stop-deleting!)
+]
+
+Each function takes a ROOS object and field name:
+
+@itemlist[
+ @item{@racket[getter obj field default] — a function that returns stored value or default.}
+ @item{@racket[setter obj field val] — a function that stores value.}
+ @item{@racket[deleter obj] — a function that removes an object, i.e. all persistent fields for that (unless @racket[stop-deleting] is @racket[#t]).}]
+ @item{@racket[stop-deleting! #t] — disables or enables deletion for current session.}
+]
+
+See the full SQLite example in the next section.
+
+@subsection{Address Book Example with Persistent Vector of Person IDs}
+
+This example builds an address book with persistent reference to persons, using ROOS' object ID mechanism.
+
+@racketblock[
+(def-roos (person) this (supers)
+  (persist "Name" (name ""))
+  (persist "Phone" (phone "")))
+
+(def-roos (addressbook) this (supers)
+  (persist "Person IDs" (ids (vector)))
+  (persons (vector))
+
+  ((init)
+   (let ((restored (vector-map
+                    (lambda (id)
+                      (let ((p (-! person)))
+                        (roos-id! p id)
+                        p))
+                    (-> this ids))))
+     (set! persons restored)))
+
+  ((add-person p)
+   (let ((new-persons (vector-append persons (vector p))))
+     (set! persons new-persons)
+     (-> this ids! (vector-map roos-id new-persons))))
+
+  ((insert-person-at i p)
+   (let* ((before (subvector persons 0 i))
+          (after (subvector persons i (vector-length persons)))
+          (new-persons (vector-append before (vector p) after)))
+     (set! persons new-persons)
+     (-> this ids! (vector-map roos-id new-persons))))
+
+  ((remove-person-at i)
+   (let* ((before (subvector persons 0 i))
+          (after (subvector persons (add1 i) (vector-length persons)))
+          (new-persons (vector-append before after)))
+     (set! persons new-persons)
+     (-> this ids! (vector-map roos-id new-persons))))
+
+  ((all-names)
+   (vector->list (vector-map (lambda (p) (-> p name)) persons))))
+
+;; Create sample data
+(define ab (-! addressbook))
+(roos-id! ab 'addressbook-id)
+
+(define alice (-! person))
+(-> alice name! "Alice")
+(-> alice phone! "123")
+(-> ab add-person alice)
+
+(define bob (-! person))
+(-> bob name! "Bob")
+(-> bob phone! "456")
+(-> ab add-person bob)
+
+(-> ab all-names) ; => '("Alice" "Bob")
+
+;; Reopen addressbook later from persistent storage
+(define ab2 (-! addressbook))
+(roos-id! ab2 'addressbook-id)
+(-> ab2 all-names) ; => '("Alice" "Bob")
+]
+
+@bold{Note:} call @racket[(roos-storage-stop-deleting! #t)] before shutdown to prevent finalizers from purging storage content.
+
+@subsection{Cyclic References and Garbage Collection}
+
+ROOS objects can reference each other freely, including circular (cyclic) references.
+For example, a doubly-linked list:
+
+@racketblock[
+(def-roos (node) this (supers)
+  (persist "Value" (val 0))
+  (next #f)
+  (prev #f))
+
+(define a (-! node))
+(-> a val! 1)
+
+(define b (-! node))
+(-> b val! 2)
+
+(-> a next! b)
+(-> b prev! a)
+]
+
+To avoid resource leaks when such cyclic structures are finalized, make sure that any cleanup (e.g. persistence flush) is done in @racket[finalize] methods. Racket's garbage collector can collect cyclic references if there are no external references left.
+
+If persistent fields depend on each other cyclically (e.g. mutual IDs), you may want to:
+
+@itemlist[
+ @item{Assign fixed IDs at creation time.}
+ @item{Defer construction of cyclic pointers until after all involved objects exist.}
+ @item{Use @racket[init] to resolve and wire up these references after restoring from persistent state.}
+]
+
+Cyclic references are supported and safe as long as your finalization logic handles them properly.
