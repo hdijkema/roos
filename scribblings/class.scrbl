@@ -24,7 +24,10 @@ If @racket[obj] is a Roos object (@racket[roos-object?]), it uses the Roos dispa
 Otherwise, it falls back to the original @racket[send] from @racket[racket/class].}
 
 @examples[
-#:eval (make-base-eval '(require roos/class roos))
+#:eval (make-base-eval '(require roos/class))
+(def-roos (t x) this (supers)
+  (y x)
+  ((f a) (* a x)))
 (define o (new t 5))
 (send o f 2) ; → 10
 ]
