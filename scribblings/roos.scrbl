@@ -57,34 +57,34 @@ Methods and fields are always virtual. Superclass definitions are resolved based
  @item{@racket[(roos-id! obj id)] — set object's ID (used in persistence).}
 ]
 
-@subsubsection{@racket[(-> obj field)]}
+@subsection{@racket[(-> obj field)]}
 Call the getter for the attribute named @racket[field] in the object @racket[obj].
 
-@subsubsection{@racket[(-> obj field! val)]}
+@subsection{@racket[(-> obj field! val)]}
 Call the setter for the attribute named @racket[field], assigning it the value @racket[val].
 
-@subsubsection{@racket[(-> obj method args ...)]}
+@subsection{@racket[(-> obj method args ...)]}
 Invoke the method named @racket[method] on @racket[obj] with the provided arguments.
 
-@subsubsection{@racket[(->> obj name)]}
+@subsection{@racket[(->> obj name)]}
 Retrieve the procedure representing a method or accessor named @racket[name] from @racket[obj]. Useful for higher-order functions.
 
-@subsubsection{@racket[(roos-object? x)]}
+@subsection{@racket[(roos-object? x)]}
 Returns @racket[#t] if @racket[x] is an instance of a ROOS object, @racket[#f] otherwise.
 
-@subsubsection{@racket[(roos-class? x)]}
+@subsection{@racket[(roos-class? x)]}
 Returns @racket[#t] if @racket[x] is a valid ROOS class definition.
 
-@subsubsection{@racket[(roos-classname obj)]}
+@subsection{@racket[(roos-classname obj)]}
 Returns the symbolic class name of the object @racket[obj].
 
-@subsubsection{@racket[(roos-class obj)]}
+@subsection{@racket[(roos-class obj)]}
 Returns the class definition from which @racket[obj] was instantiated.
 
-@subsubsection{@racket[(roos-id obj)]}
+@subsection{@racket[(roos-id obj)]}
 Returns the unique persistent ID of @racket[obj]. Used for persistence resolution.
 
-@subsubsection{@racket[(roos-id! obj id)]}
+@subsection{@racket[(roos-id! obj id)]}
 Assigns a persistent identifier to @racket[obj]. Required when restoring from storage with known identifiers.
 
 
