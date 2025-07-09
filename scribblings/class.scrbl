@@ -36,7 +36,10 @@ Dispatches to either Roos or Racket based on the object type.}
 Creates a new object. If @racket[class] is a Roos class (@racket[roos-class?]), then @racket[roos-new] is used.  
 Otherwise, the standard @racket[new] from @racket[racket/class] is used, supporting initialization arguments such as @racket[(init-field val)].}
 
-@examples[
+@#reader scribble/comment-reader 
+[racketblock 
+  (require roos/class) ; instead of racket/class
+          
   (define (t% x)
     (class object%
       (init-field (y* x))
