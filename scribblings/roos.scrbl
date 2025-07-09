@@ -57,35 +57,67 @@ Methods and fields are always virtual. Superclass definitions are resolved based
  @item{@racket[(roos-id! obj id)] — set object's ID (used in persistence).}
 ]
 
-@subsection{@racket[(-> obj field)]}
-Call the getter for the attribute named @racket[field] in the object @racket[obj].
+@defproc[(-> [obj any/c] [name symbol?] ...) any/c]{
+Invoke a getter, setter, or method on ROOS object @racket[obj] using name and arguments.
+}
 
-@subsection{@racket[(-> obj field! val)]}
-Call the setter for the attribute named @racket[field], assigning it the value @racket[val].
+@defproc[(->> [obj any/c] [name symbol?]) procedure?]{
+Return the method or field procedure named @racket[name] from object @racket[obj].
+Useful for higher-order usage.
+}
 
-@subsection{@racket[(-> obj method args ...)]}
-Invoke the method named @racket[method] on @racket[obj] with the provided arguments.
+@defproc[(roos-class? [x any/c]) boolean?]{
+Returns @racket[#t] if @racket[x] is a ROOS class definition.
+}
 
-@subsection{@racket[(->> obj name)]}
-Retrieve the procedure representing a method or accessor named @racket[name] from @racket[obj]. Useful for higher-order functions.
+@defproc[(roos-object? [x any/c]) boolean?]{
+Returns @racket[#t] if @racket[x] is an instance of a ROOS object.
+}
 
-@subsection{@racket[(roos-object? x)]}
-Returns @racket[#t] if @racket[x] is an instance of a ROOS object, @racket[#f] otherwise.
+@defproc[(roos-obj? [x any/c]) boolean?]{
+Alias for @racket[roos-object?].
+}
 
-@subsection{@racket[(roos-class? x)]}
-Returns @racket[#t] if @racket[x] is a valid ROOS class definition.
+@defproc[(roos-class [obj any/c]) any/c]{
+Returns the ROOS class of which @racket[obj] is an instance.
+}
 
-@subsection{@racket[(roos-classname obj)]}
-Returns the symbolic class name of the object @racket[obj].
+@defproc[(roos-classname [obj any/c]) symbol?]{
+Returns the symbolic class name of @racket[obj].
+}
 
-@subsection{@racket[(roos-class obj)]}
-Returns the class definition from which @racket[obj] was instantiated.
+@defproc[(roos-id [obj any/c]) symbol?]{
+Returns the persistent unique identifier for @racket[obj].
+}
 
-@subsection{@racket[(roos-id obj)]}
-Returns the unique persistent ID of @racket[obj]. Used for persistence resolution.
+@defproc[(roos-id! [obj any/c] [id symbol?]) void?]{
+Sets the persistent unique identifier of @racket[obj] to @racket[id].
+}
 
-@subsection{@racket[(roos-id! obj id)]}
-Assigns a persistent identifier to @racket[obj]. Required when restoring from storage with known identifiers.
+@defproc[(roos-new [class any/c] [args any/c] ...) any/c]{
+Constructs a new ROOS object of the given @racket[class], optionally with arguments.
+If the class defines @racket[init], that method is invoked automatically.
+}
+
+@defproc[(-! [class any/c] [args any/c] ...) any/c]{
+Convenient shorthand for @racket[roos-new]. Also invokes @racket[init] if present.
+}
+
+@defproc[(roos-help) void?]{
+Prints help information for all known ROOS classes, including attributes and documented methods.
+}
+
+@defproc[(with-roos-obj [x any/c]) any/c]{
+Convenience wrapper to evaluate expressions in the context of a ROOS object.
+}
+
+@defproc[(roos-storage! [getter procedure?] [setter procedure?] [deleter procedure?] [stop-deleting! procedure?]) void?]{
+Registers the storage backend for persistent attributes. This must be set before any persistence takes place.
+}
+
+@defproc[(roos-storage-stop-deleting! [flag boolean?]) void?]{
+Globally disables or enables deletion via the registered deleter procedure. Useful when shutting down.
+}
 
 
 @section{Persistence and Storage Backend}
