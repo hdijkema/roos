@@ -17,7 +17,7 @@ It supports class definitions with attributes and methods, multiple inheritance,
 and persistent fields through a user-extensible storage mechanism. All methods and attributes
 are virtual, and may be overridden in subclasses.
 
-@subsection{Class Definition Syntax}
+@section{Class Definition Syntax}
 
 @defform[(def-roos (class-name ...) this (supers ...) body ...)]{
 Defines a ROOS class.
