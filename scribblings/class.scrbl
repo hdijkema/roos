@@ -1,7 +1,12 @@
 #lang scribble/manual
 
-@(require scribble/example
-          (for-label racket/class roos))
+@(require
+   scribble/example
+   @(for-label roos/class))
+
+@(define myeval
+   (make-base-eval '(require roos/class)))
+
 
 @title{Interop Macros for Roos and racket/class}
 
