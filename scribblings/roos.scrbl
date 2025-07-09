@@ -216,7 +216,7 @@ Below is an example SQLite backend implementation that stores fields in a table:
 This example builds an address book with persistent reference to persons, using ROOS' object ID mechanism.
 
 @#reader scribble/comment-reader 
-@racketblock[
+[racketblock
 (require racket/vector)
 
 ;; person class
@@ -255,7 +255,6 @@ This example builds an address book with persistent reference to persons, using 
                            (-> this ids))))
               (set! persons (list->vector ps)))))
   )
-   
    
 ;; Create sample data
 (define b (-! book))
