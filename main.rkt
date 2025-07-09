@@ -382,12 +382,12 @@
   (syntax-case stx ()
     ((_ this keyw)
      (begin
-       (printf "mk-keyw: ~a" (syntax->datum #'keyw))
-       #'(hash-set! this 'init (lambda () #f))))
+       ;(printf "mk-keyw: ~a" (syntax->datum #'keyw))
+       #'(hash-set! this 'keyw (lambda () #f))))
     ((_ this keyw body ...)
      (begin
-       (printf "mk-keyw: ~a" (syntax->datum #'keyw))
-       #'(hash-set! this 'init (lambda () body ...))))
+       ;(printf "mk-keyw: ~a" (syntax->datum #'keyw))
+       #'(hash-set! this 'keyw (lambda () body ...))))
     ))
 
 (define-syntax (@@mk-body stx)
@@ -552,7 +552,7 @@
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
                                  (@@mk-super-infos supers ...)
-                                 'cl))))
+                                 '(cl)))))
     ((_ (cl . a) this (supers ...) body ...)
      (begin
        (define (cl . a)
@@ -572,7 +572,7 @@
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
                                  (@@mk-super-infos supers ...)
-                                 (cl a ...)))))
+                                 '(cl a ...)))))
     ((_ (cl a ... . b) this (supers ...) body ...)
      (begin
        (define (cl a ... . b)
@@ -582,7 +582,7 @@
                                  (@@mk-name cl)
                                  (@@mk-member-infos body ...)
                                  (@@mk-super-infos supers ...)
-                                 (cl a ... . b)))))
+                                 '(cl a ... . b)))))
     ((_ cl this supers body ...)
      (error (string-append
              "Wrong roos definition\n"
