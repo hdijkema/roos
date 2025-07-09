@@ -69,7 +69,7 @@ Each function takes a ROOS object and field name:
 @itemlist[
  @item{@racket[getter obj field default] — a function that returns stored value or default.}
  @item{@racket[setter obj field val] — a function that stores value.}
- @item{@racket[deleter obj] — a function that removes an object, i.e. all persistent fields for that (unless @racket[stop-deleting] is @racket[#t]).}]
+ @item{@racket[deleter obj] — a function that removes an object, i.e. all persistent fields for that (unless @racket[stop-deleting] is @racket[#t]).]}
  @item{@racket[stop-deleting! #t] — disables or enables deletion for current session.}
 ]
 
