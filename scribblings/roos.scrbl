@@ -238,7 +238,7 @@ This example builds an address book with persistent reference to persons, using 
 (-> b (for-each (lambda (p) (displayln (-> p name)))))
 
 ;; Reopen addressbook later from persistent storage
-(define a (-! book)
+(define a (-! book))
 (-> b (for-each (lambda (p) (displayln (-> p name)))))
   
 ]
