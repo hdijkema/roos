@@ -37,6 +37,11 @@ Similar to @racket[send], but uses a cleaner Racket-style method call syntax.
 Dispatches to either Roos or Racket based on the object type.}
 
 @examples[
+#:eval (make-base-eval '(require roos/class))
+(def-roos (t x) this (supers)
+  (y x)
+  ((f a) (* a x)))
+(define o (new t 5))
 (-> o f 3) ; → 15
 ]
 
@@ -93,10 +98,5 @@ Otherwise, the standard @racket[new] from @racket[racket/class] is used, support
 The module includes an internal test suite using RackUnit.  
 It validates consistent behavior of @racket[send], @racket[->], and @racket[new] across both Racket classes and Roos classes.
 
-@examples[
-(module+ test
-  (require rackunit)
-  ...)
-]
 
 @; End of documentation
