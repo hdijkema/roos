@@ -8,7 +8,7 @@
    (make-base-eval '(require roos/class)))
 
 
-@title{Interoperability Macros for roos and racket/class}
+@title[#:tag "top"]{Interoperability Macros for roos and racket/class}
 
 @author[@author+email["Hans Dijkema" "hans@dijkewijk.nl"]]
 

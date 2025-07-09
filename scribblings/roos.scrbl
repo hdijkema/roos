@@ -17,7 +17,9 @@ It supports class definitions with attributes and methods, multiple inheritance,
 and persistent fields through a user-extensible storage mechanism. All methods and attributes
 are virtual, and may be overridden in subclasses.
 
-See also @tech[#:doc '(lib "scribblings/roos-class.scrbl")]{roos/class}.
+See also 
+@seclink["top" #:doc '(lib "roos/scribblings/class.scrbl")]{roos/class},
+the interoperability macros for roos and racket/class.
 
 @section{Class Definition Syntax}
 
