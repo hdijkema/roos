@@ -8,11 +8,11 @@
    (make-base-eval '(require roos/class)))
 
 
-@title{Interop Macros for Roos and racket/class}
+@title{Interoperability Macros for roos and racket/class}
 
 @author[@author+email["Hans Dijkema" "hans@dijkewijk.nl"]]
 
-@defmodule[roos/interop]
+@defmodule[roos/class]
 
 This module provides a compatibility layer between the @racket[roos] object system and the standard @racketmodname[racket/class] system. It exports the macros @racket[send], @racket[->], and @racket[new], which automatically dispatch to the appropriate implementation based on the type of the given object or class.
 
