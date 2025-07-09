@@ -7,7 +7,7 @@
 @(define myeval
    (make-base-eval '(require roos)))
 
-@title[#:tag "roos"]{roos}
+@title[#:tag "roos"]{Roos OO System}
 
 @author[@author+email["Hans Dijkema" "hans@dijkewijk.nl"]]
 
