@@ -33,7 +33,8 @@ Each body entry may be:
  @item{Documented attribute: @racket[("Doc" (attr val))] — adds inline documentation to attribute.}
  @item{Method: @racket[((method args ...) expr ...)] — defines a public method.}
  @item{Documented method: @racket[("Doc" ((method args ...) expr ...))] — with documentation.}
- @item{Reserved method: @racket[init] and @racket[finalize] are automatically called at creation and finalization.}
+ @item{Optional: you may define @racket[(init expr ...)] to run code immediately after object construction.}
+ @item{Optional: you may define @racket[(finalize expr ...)] to run cleanup logic when object is collected.}
 ]
 
 Methods and fields are always virtual. Superclass definitions are resolved based on declared order. Multiple inheritance is supported and left-to-right linearized.
@@ -56,6 +57,37 @@ Methods and fields are always virtual. Superclass definitions are resolved based
  @item{@racket[(roos-id! obj id)] — set object's ID (used in persistence).}
 ]
 
+@subsubsection{@racket[(-> obj field)]}
+Call the getter for the attribute named @racket[field] in the object @racket[obj].
+
+@subsubsection{@racket[(-> obj field! val)]}
+Call the setter for the attribute named @racket[field], assigning it the value @racket[val].
+
+@subsubsection{@racket[(-> obj method args ...)]}
+Invoke the method named @racket[method] on @racket[obj] with the provided arguments.
+
+@subsubsection{@racket[(->> obj name)]}
+Retrieve the procedure representing a method or accessor named @racket[name] from @racket[obj]. Useful for higher-order functions.
+
+@subsubsection{@racket[(roos-object? x)]}
+Returns @racket[#t] if @racket[x] is an instance of a ROOS object, @racket[#f] otherwise.
+
+@subsubsection{@racket[(roos-class? x)]}
+Returns @racket[#t] if @racket[x] is a valid ROOS class definition.
+
+@subsubsection{@racket[(roos-classname obj)]}
+Returns the symbolic class name of the object @racket[obj].
+
+@subsubsection{@racket[(roos-class obj)]}
+Returns the class definition from which @racket[obj] was instantiated.
+
+@subsubsection{@racket[(roos-id obj)]}
+Returns the unique persistent ID of @racket[obj]. Used for persistence resolution.
+
+@subsubsection{@racket[(roos-id! obj id)]}
+Assigns a persistent identifier to @racket[obj]. Required when restoring from storage with known identifiers.
+
+
 @section{Persistence and Storage Backend}
 
 ROOS lets you persist selected attributes by tagging them with @racket[persist]. Persistence is handled by user-provided backends through:
@@ -75,70 +107,140 @@ Each function takes a ROOS object and field name:
 
 See the full SQLite example in the next section.
 
+@subsection{Example of persistence backend for roos}
+
+Below is an example SQLite backend implementation that stores fields in a table:
+
+@racketblock[
+(require db)
+(require racket/vector)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Conversion of field values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (value->string s-expr)
+  (let ((o (open-output-string)))
+    (write s-expr o)
+    (get-output-string o)))
+
+(define (string->value str)
+  (let ((o (open-input-string str)))
+    (read o)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Database storage backend
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define conn (sqlite3-connect #:database "roos.db" #:mode 'create))
+(query-exec conn "CREATE TABLE IF NOT EXISTS store (class TEXT, id TEXT, field TEXT, val TEXT)")
+
+(define stop-deleting? #f)
+(define (stop-deleting-fn flag) (set! stop-deleting? flag))
+
+(define (getter obj field default)
+  (let ((class (symbol-string (roos-classname obj)))
+        (id (symbol->string (roos-id obj)))
+        (field (symbol->string field)))
+  (let ((count (query-value conn
+                            "SELECT count(*) FROM store WHERE class=? AND id=? AND field=?"
+                            class id field)))
+    (if (= count 0)
+        default
+        (let ((row (query-row conn
+                              "SELECT val FROM store WHERE class=? AND id=? AND field=?"
+                              class id field)))
+          (if row
+              (string->value (vector-ref row 0))
+              default))))))
+
+(define (setter obj field val)
+  (let ((class (symbol->string (roos-classname obj)))
+        (id    (symbol->string (roos-id obj)))
+        (fld   (symbol->string field))
+        (vstr  (value->string val)))
+    (query-exec conn "DELETE FROM store WHERE class=? AND id=? AND field=?" class id fld)
+    (query-exec conn "INSERT INTO store (class, id, field, val) VALUES (?, ?, ?, ?)" class id fld vstr)))
+
+(define (deleter obj)
+  (unless stop-deleting?
+    (let ((class (symbol->string (roos-classname obj)))
+          (id    (symbol->string (roos-id obj))))
+      (query-exec conn "DELETE FROM store WHERE class=? AND id=?" class id))))
+
+(roos-storage! getter setter deleter stop-deleting-fn)
+
+(plumber-add-flush! (current-plumber)
+                    (lambda (x)
+                      (printf "Collecting garbage to cleanup the storage for variables that have been cleared\n")
+                      (collect-garbage)))             
+]
+
+
 @subsection{Address Book Example with Persistent Vector of Person IDs}
 
 This example builds an address book with persistent reference to persons, using ROOS' object ID mechanism.
 
 @racketblock[
+(require racket/vector)
+
 (def-roos (person) this (supers)
-  (persist "Name" (name ""))
-  (persist "Phone" (phone "")))
+  (persist (name ""))
+  (persist (tel "")))
 
-(def-roos (addressbook) this (supers)
-  (persist "Person IDs" (ids (vector)))
-  (persons (vector))
 
-  ((init)
-   (let ((restored (vector-map
-                    (lambda (id)
-                      (let ((p (-! person)))
-                        (roos-id! p id)
-                        p))
-                    (-> this ids))))
-     (set! persons restored)))
+(def-roos (book) this (supers)
+  (persist (ids (list)))
+  (persist (name ""))
+  ("" (persons (make-vector 0)))
 
-  ((add-person p)
-   (let ((new-persons (vector-append persons (vector p))))
-     (set! persons new-persons)
-     (-> this ids! (vector-map roos-id new-persons))))
+  ((add p)
+   (set! persons (vector-extend persons (+ (vector-length persons) 1) p))
+   (-> this ids! (vector->list (vector-map (lambda (o) (-> o roos-id)) persons))))
 
-  ((insert-person-at i p)
-   (let* ((before (subvector persons 0 i))
-          (after (subvector persons i (vector-length persons)))
-          (new-persons (vector-append before (vector p) after)))
-     (set! persons new-persons)
-     (-> this ids! (vector-map roos-id new-persons))))
+  ((remove i)
+   (set! persons (vector-append (vector-take persons i) (vector-drop persons (+ i 1))))
+   (-> this ids! (vector->list
+                    (vector-map (lambda (o) (-> o roos-id)) persons))))
 
-  ((remove-person-at i)
-   (let* ((before (subvector persons 0 i))
-          (after (subvector persons (add1 i) (vector-length persons)))
-          (new-persons (vector-append before after)))
-     (set! persons new-persons)
-     (-> this ids! (vector-map roos-id new-persons))))
+  ((for-each f) 
+   (letrec ((g (lambda (i n)
+                 (when (< i n)
+                   (f (vector-ref persons i))
+                   (g (+ i 1) n)))))
+     (g 0 (vector-length persons))))
 
-  ((all-names)
-   (vector->list (vector-map (lambda (p) (-> p name)) persons))))
-
+  (init (begin
+            (-> this roos-id! 'book)
+            (let ((ps (map (lambda (id)
+                             (let ((p (roos-new person)))
+                               (-> p roos-id! id)
+                               p))
+                           (-> this ids))))
+              (set! persons (list->vector ps)))))
+  )
+   
+   
 ;; Create sample data
-(define ab (-! addressbook))
-(roos-id! ab 'addressbook-id)
+(define b (-! book))
 
-(define alice (-! person))
-(-> alice name! "Alice")
-(-> alice phone! "123")
-(-> ab add-person alice)
+(define (adder n t)
+  (let ((p (-! person)))
+    (-> p name! n)
+    (-> p tel! t)
+    (-> b add p)))
 
-(define bob (-! person))
-(-> bob name! "Bob")
-(-> bob phone! "456")
-(-> ab add-person bob)
+(adder "Alice" "123")
+(adder "Bob" "456")
+(adder "Jos" "982")
+(adder "Rebecca" "363")
 
-(-> ab all-names) ; => '("Alice" "Bob")
+(-> b (for-each (lambda (p) (displayln (-> p name)))))
 
 ;; Reopen addressbook later from persistent storage
-(define ab2 (-! addressbook))
-(roos-id! ab2 'addressbook-id)
-(-> ab2 all-names) ; => '("Alice" "Bob")
+(define a (-! book)
+(-> b (for-each (lambda (p) (displayln (-> p name)))))
+  
 ]
 
 @bold{Note:} call @racket[(roos-storage-stop-deleting! #t)] before shutdown to prevent finalizers from purging storage content.

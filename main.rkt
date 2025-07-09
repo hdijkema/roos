@@ -136,7 +136,7 @@
      ))
     ))
 
-(define-syntax @@mk-member-info
+(define-syntax @@mk-member-info*
   (syntax-rules ()
     ((_ ((f) expr ...))
      (list (@@mk-name f) (@@mk-lit (f)) ""))
@@ -160,6 +160,24 @@
      (@@mk-mem-info* doc a b))
     ((_ (a b))
      (list 'a 'a ""))
+    ))
+
+(define-syntax (@@mk-member-info stx)
+  (syntax-case stx ()
+    ((_ (keyw))
+     (let ((kw (syntax->datum #'keyw)))
+       (if (or (eq? kw 'init)
+               (eq? kw 'finalize))
+           #'(list 'keyw 'keyw (format "has empty '~a'" 'keyw))
+           #'(@@mk-member-info* keyw))))
+    ((_ (keyw b1 ...))
+     (let ((kw (syntax->datum #'keyw)))
+       (if (or (eq? kw 'init)
+               (eq? kw 'finalize))
+           #'(list 'keyw 'keyw (format "has defined '~a'" 'keyw))
+           #'(@@mk-member-info* (keyw b1 ...)))))
+    ((_ x)
+     #'(@@mk-member-info* x))
     ))
 
 (define-syntax @@mk-member-infos
@@ -334,7 +352,7 @@
            ))]
     ))
 
-(define-syntax @@mk-body
+(define-syntax @@mk-body*
   (syntax-rules ()
     ((_ this supers (doc ((f) expr ...)))
      (@@mk-doc-method this supers (doc ((f) expr ...))))
@@ -358,6 +376,36 @@
      (@@mk-persist this supers (doc (a b))))
     ((_ this supers (a b))
      (@@mk-persist this supers (a b)))
+    ))
+
+(define-syntax (@@mk-keyw stx)
+  (syntax-case stx ()
+    ((_ this keyw)
+     (begin
+       (printf "mk-keyw: ~a" (syntax->datum #'keyw))
+       #'(hash-set! this 'init (lambda () #f))))
+    ((_ this keyw body ...)
+     (begin
+       (printf "mk-keyw: ~a" (syntax->datum #'keyw))
+       #'(hash-set! this 'init (lambda () body ...))))
+    ))
+
+(define-syntax (@@mk-body stx)
+  (syntax-case stx ()
+    ((_ this supers (keyw))
+     (let ((kw (syntax->datum #'keyw)))
+       (if (or (eq? kw 'init)
+               (eq? kw 'finalize))
+           #'(@@mk-keyw this keyw)
+           #'(@@mk-body* this supers (keyw)))))
+    ((_ this supers (keyw a ...))
+     (let ((kw (syntax->datum #'keyw)))
+       (if (or (eq? kw 'init)
+               (eq? kw 'finalize))
+           #'(@@mk-keyw this keyw a ...)
+           #'(@@mk-body* this supers (keyw a ...)))))
+    ((_ this supers any)
+     #'(@@mk-body* this supers any))
     ))
 
 (define-syntax @@mk-bodies
@@ -410,7 +458,7 @@
        (@@guard-this this)
        (@@guard-supers supers)))))
 
-(define-for-syntax (@@has-persist syntax count)
+(define (@@has-persist syntax count)
   ;(display "has-persist ")(display count)(display " ")(display syntax)(newline)
   (if (null? syntax)
       #f
@@ -424,12 +472,25 @@
             (@@has-persist (cdr syntax) (+ count 1))))))
 
 
-(define-syntax (@@finalize stx)
-  (syntax-case stx ()
-    ((_ this body ...)
-    (if (@@has-persist (cddr (syntax->datum stx)) 0)
-        #'(register-finalizer this (lambda (obj) (@@cache-delete! obj)))
-        #'#t))
+(define-syntax @@finalize
+  (syntax-rules ()
+    ((_ this (body ...))
+     (let ((has-persist (@@has-persist '(body ...) 0)))
+       (if has-persist
+           (let ((our-finalizer (hash-ref (roos-object*-this this) 'finalize)))
+             (when (not our-finalizer)
+               (set! our-finalizer (lambda () #t)))
+             (hash-set! (roos-object*-this this) 'finalize 'finalizer-registered)
+             (register-finalizer this
+                                 (lambda (obj)
+                                   ; First call our own finalizer
+                                   (our-finalizer)
+                                   ; Next delete from storage
+                                   (@@cache-delete! obj))))
+           (let ((f (hash-ref (roos-object*-this this) 'finalize)))
+             (unless (eq? f #f)
+               (register-finalizer this (lambda (obj) (f)))))))
+     )
     ))
 
 
@@ -441,6 +502,8 @@
      (begin
        (@@check-keywords this supers ...)
        (define this (make-hasheq))
+
+       (hash-set! this 'finalize #f)
          
        (@@mk-body this (supers ...) (roos-id (@@new-id)))
 
@@ -457,7 +520,7 @@
          (let ((ff (@@find-func f (list this))))
            (if ff
                (apply ff args)
-               (error "No such member"))))
+               (error (format "~a: ~a - no such member." (roos-object*-classname this) f)))))
 
        (set! this (roos-object*
                    this
@@ -468,7 +531,10 @@
                    @caller@))
        (@set-caller@ @caller@)
 
-       (@@finalize this body ...)
+       (@@finalize this (body ...))
+
+       (unless (eq? (hash-ref (roos-object*-this this) 'init #f) #f)
+         ((hash-ref (roos-object*-this this) 'init)))
 
        this
        )
@@ -517,7 +583,22 @@
                                  (@@mk-member-infos body ...)
                                  (@@mk-super-infos supers ...)
                                  (cl a ... . b)))))
-     
+    ((_ cl this supers body ...)
+     (error (string-append
+             "Wrong roos definition\n"
+             "Define roos classes as follows:\n\n"
+             "(def-roos (cl ...) this (supers ...)\n"
+             "   (attr value)\n"
+             "   (persist (attr value))\n"
+             "   (\"documentation\" (attr value))\n"
+             "   (persist \"documentation\" (attr value))\n"
+             "\n"
+             "   ((method ...) body ...)\n"
+             "   (\"documentation\" ((method ...) body ...))\n"
+             "\n"
+             "   (init expr ...)      ; optional initializer\n"
+             "   (finalize expr ...)  ; optional finalizer\n"
+             ")\n")))
     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -575,7 +656,10 @@
                    (let ((f (@@find-func 'f obj)))
                      (if f
                          f
-                         (error "No such member")))
+                         (error (format "~a: ~a - no such member"
+                                        (roos-object*-classname obj)
+                                        'f
+                                        ))))
                    (error "Not a list of roos objects (supers)"))))
          (error "Not a roos object")))))
 
@@ -600,12 +684,16 @@
       (let ((f (@@find-func name (list obj))))
         (if f
             f
-            (error "No such member")))
+            (error (format "~a: ~a - no such member"
+                           (roos-object*-classname obj)
+                           name))))
       (if (@@is-supers? obj)
           (let ((f (@@find-func name obj)))
             (if f
                 f
-                (error "No such member")))
+                (error (format "~a: ~a - no such member"
+                               (roos-object*-classname obj)
+                               name))))
           (error "Not a roos object of roos supers"))))
 
 (define-syntax @->
