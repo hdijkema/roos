@@ -12,7 +12,7 @@
 @author[@author+email["Hans Dijkema" "hans@dijkewijk.nl"]]
 
 @defmodule[roos]
-ROOS is a lightweight object-oriented framework for Racket.
+ROOS is simple (perl like) a lightweight object-oriented framework for racket. 
 It supports class definitions with attributes and methods, multiple inheritance, introspection,
 and persistent fields through a user-extensible storage mechanism. All methods and attributes
 are virtual, and may be overridden in subclasses.
