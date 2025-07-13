@@ -33,8 +33,9 @@ Otherwise, it falls back to the original @racket[send] from @racket[racket/class
 ]
 
 @defidform[->]{(-> obj method arg ...)
-Similar to @racket[send], but uses a cleaner Racket-style method call syntax.  
-Dispatches to either Roos or Racket based on the object type.}
+An alternative method dispatch macro. The syntax omits the explicit @racket[send] and may feel more
+familiar to users of other programming languages that use concise or operator-based method invocation.
+This macro checks whether @racket[obj] is a Roos object or a standard Racket object and dispatches accordingly.}
 
 @examples[
 #:eval (make-base-eval '(require roos/class))
@@ -44,6 +45,18 @@ Dispatches to either Roos or Racket based on the object type.}
 (define o (new t 5))
 (-> o f 3) ; → 15
 ]
+
+@subsection{Comparison with other languages}
+
+In other languages, method invocation often uses compact notation:
+
+@itemlist[
+  @item{Perl: @tt{$obj->method(args)}}
+  @item{Python / Ruby / Java / JavaScript: @tt{obj.method(args)}}
+  @item{C++: @tt{obj->method(args)} or @tt{obj.method(args)}}
+]
+
+The @racket[->] macro serves a similar role within the s-expression syntax of Racket.
 
 @defidform[new]{(new class arg ...)
 Creates a new object. If @racket[class] is a Roos class (@racket[roos-class?]), then @racket[roos-new] is used.  
