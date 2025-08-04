@@ -1,6 +1,6 @@
 #lang racket
 
-(require (rename-in racket/gui [send old-send] [new old-new]))
+(require (rename-in racket/gui [send old-send] [new old-new] [-> old-gui->]))
 (require (for-syntax (rename-in roos [-> old->])))
 (require (rename-in roos [-> old->]))
 
