@@ -10,6 +10,7 @@
   '(
     ("scribblings/roos.scrbl" () (library) "roos")
     ("scribblings/class.scrbl" () (interop) "roos-class")
+    ("scribblings/gui-class.scrbl" () (interop) "roos-gui-class")
     )
   )
 
@@ -20,3 +21,4 @@
   '("racket-doc"
     "rackunit-lib"
     "scribble-lib"))
+
