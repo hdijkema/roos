@@ -1,7 +1,7 @@
 #lang info
 
 (define pkg-authors '(hnmdijkema))
-(define version "0.8.3")
+(define version "0.8.5")
 (define license 'Apache-2.0)
 (define collection "roos")
 (define pkg-desc "A Simple (perl like) OO system for racket")
@@ -10,7 +10,6 @@
   '(
     ("scribblings/roos.scrbl" () (library) "roos")
     ("scribblings/class.scrbl" () (interop) "roos-class")
-    ("scribblings/gui-class.scrbl" () (interop) "roos-gui-class")
     )
   )
 
